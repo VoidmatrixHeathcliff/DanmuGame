@@ -7,6 +7,9 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
+
+#define GAME_API extern "C"
 
 Uint32 g_u32EventTypeEnter, g_u32EventTypeMessage;
 
@@ -14,6 +17,95 @@ SDL_Window* g_pWindow = nullptr;
 SDL_Renderer* g_pRenderer = nullptr;
 
 SDL_Event g_event;
+bool g_bIsQuit = false;
+
+std::unordered_map<std::string, Uint32> mapEvent;
+
+static const char* ERRMSG_INVALIDMEMBER = "invalid member";
+
+inline void CheckColor(lua_State* pLuaVM, int idx, SDL_Color& color)
+{
+	luaL_argexpected(pLuaVM, lua_istable(pLuaVM, idx), idx, LUA_TABLIBNAME);
+
+	lua_pushstring(pLuaVM, "r"); lua_rawget(pLuaVM, idx);
+	luaL_argcheck(pLuaVM, lua_isnumber(pLuaVM, -1),
+		idx, std::string(ERRMSG_INVALIDMEMBER).append(" : r").c_str());
+	color.r = (int)lua_tonumber(pLuaVM, -1);
+	lua_pop(pLuaVM, 1);
+
+	lua_pushstring(pLuaVM, "g"); lua_rawget(pLuaVM, idx);
+	luaL_argcheck(pLuaVM, lua_isnumber(pLuaVM, -1),
+		idx, std::string(ERRMSG_INVALIDMEMBER).append(" : g").c_str());
+	color.g = (int)lua_tonumber(pLuaVM, -1);
+	lua_pop(pLuaVM, 1);
+
+	lua_pushstring(pLuaVM, "b"); lua_rawget(pLuaVM, idx);
+	luaL_argcheck(pLuaVM, lua_isnumber(pLuaVM, -1),
+		idx, std::string(ERRMSG_INVALIDMEMBER).append(" : b").c_str());
+	color.b = (int)lua_tonumber(pLuaVM, -1);
+	lua_pop(pLuaVM, 1);
+
+	lua_pushstring(pLuaVM, "a"); lua_rawget(pLuaVM, idx);
+	luaL_argcheck(pLuaVM, lua_isnumber(pLuaVM, -1),
+		idx, std::string(ERRMSG_INVALIDMEMBER).append(" : a").c_str());
+	color.a = (int)lua_tonumber(pLuaVM, -1);
+	lua_pop(pLuaVM, 1);
+}
+
+GAME_API int SetDrawColor(lua_State* pLuaVM)
+{
+	SDL_Color _color; CheckColor(pLuaVM, 1, _color);
+
+	if (_color.a != 255) SDL_SetRenderDrawBlendMode(g_pRenderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawColor(g_pRenderer, _color.r, _color.g, _color.b, _color.a);
+
+	return 0;
+}
+
+GAME_API int ClearScreen(lua_State* pLuaVM)
+{
+	SDL_RenderClear(g_pRenderer);
+
+	return 0;
+}
+
+GAME_API int UpdateScreen(lua_State* pLuaVM)
+{
+	SDL_RenderPresent(g_pRenderer);
+
+	return 0;
+}
+
+GAME_API int UpdateEvent(lua_State* pLuaVM)
+{
+	lua_pushboolean(pLuaVM, SDL_PollEvent(&g_event));
+	g_bIsQuit = g_event.type == SDL_QUIT;
+
+	return 1;
+}
+
+GAME_API int CheckEvent(lua_State* pLuaVM)
+{
+	auto itorEvent = mapEvent.find(luaL_checkstring(pLuaVM, 1));
+
+	lua_pushboolean(pLuaVM, itorEvent != mapEvent.end() && itorEvent->second == g_event.type);
+
+	return 1;
+}
+
+GAME_API int GetDanmuUserName(lua_State* pLuaVM)
+{
+	lua_pushstring(pLuaVM, (char*)g_event.user.data1);
+
+	return 1;
+}
+
+GAME_API int GetDanmuContent(lua_State* pLuaVM)
+{
+	lua_pushstring(pLuaVM, (char*)g_event.user.data2);
+
+	return 1;
+}
 
 #undef main
 int main(int argc, char** argv)
@@ -21,12 +113,25 @@ int main(int argc, char** argv)
 	// for console debug
 	system("chcp 65001");
 
-	SDL_Init(SDL_INIT_EVERYTHING);
-
 	int iPort;
 	std::string strWindowTitle;
 	int iWindowWidth, iWindowHeight;
 	bool bIsFullScreen;
+	httplib::Server server;
+	bool bHasServerRan = false;
+	luaL_Reg aryRegCFuncs[] = { 
+		{ "SetDrawColor",		SetDrawColor },
+		{ "ClearScreen",		ClearScreen },
+		{ "UpdateScreen",		UpdateScreen },
+		{ "UpdateEvent",		UpdateEvent },
+		{ "CheckEvent",			CheckEvent },
+		{ "GetDanmuUserName",	GetDanmuUserName },
+		{ "GetDanmuContent",	GetDanmuContent },
+	};
+
+	SDL_Init(SDL_INIT_EVERYTHING);
+
+	// start process config file
 
 	std::ifstream fConfig("config.json");
 	if (!fConfig.good())
@@ -103,7 +208,8 @@ int main(int argc, char** argv)
 	g_u32EventTypeEnter = SDL_RegisterEvents(2);
 	g_u32EventTypeMessage = g_u32EventTypeEnter + 1;
 
-	httplib::Server server;
+	mapEvent.insert(std::make_pair("ENTER", g_u32EventTypeEnter));
+	mapEvent.insert(std::make_pair("MESSAGE", g_u32EventTypeMessage));
 
 	server.Post("/enter", [](const httplib::Request& req, httplib::Response& res) {
 		// req.body like this: "{\"username\":\"Voidmatrix\"}"
@@ -160,8 +266,6 @@ int main(int argc, char** argv)
 		cJSON_Delete(pJSON);
 	});
 
-	bool bHasServerRan = false;
-
 	std::thread tServer([&]() { server.listen("127.0.0.1", 25566); bHasServerRan = true; });
 
 	// start engine logic code
@@ -169,6 +273,12 @@ int main(int argc, char** argv)
 	lua_State* pLuaVM = luaL_newstate();
 	luaL_openlibs(pLuaVM);
 	lua_gc(pLuaVM, LUA_GCINC, 100);
+
+	for (size_t i = 0; i < sizeof(aryRegCFuncs) / sizeof(luaL_Reg); i++)
+	{
+		lua_pushcfunction(pLuaVM, aryRegCFuncs[i].func);
+		lua_setglobal(pLuaVM, aryRegCFuncs[i].name);
+	}
 
 	g_pWindow = SDL_CreateWindow(
 		strWindowTitle.c_str(),
@@ -190,12 +300,10 @@ int main(int argc, char** argv)
 			lua_tostring(pLuaVM, -1),
 			g_pWindow
 		);
-		return -1;
+		g_bIsQuit = true;
 	}
 
-	bool bIsQuit = false;
-
-	while (!bIsQuit)
+	while (!g_bIsQuit)
 	{
 		lua_getglobal(pLuaVM, "__MainUpdate");
 		if (!lua_isfunction(pLuaVM, -1))
@@ -206,7 +314,7 @@ int main(int argc, char** argv)
 				"function __MainUpdate is not defined",
 				g_pWindow
 			);
-			return -1;
+			break;
 		}
 
 		if (lua_pcall(pLuaVM, 0, 1, 0) != 0)
@@ -217,24 +325,12 @@ int main(int argc, char** argv)
 				lua_tostring(pLuaVM, -1),
 				g_pWindow
 			);
-			return -1;
+			break;
 		}
 
-		bIsQuit = !lua_toboolean(pLuaVM, -1);
+		g_bIsQuit = g_bIsQuit || !lua_toboolean(pLuaVM, -1);
 
 		lua_pop(pLuaVM, 1);
-
-		/*while (SDL_PollEvent(&g_event))
-		{
-			if (event.type == g_u32EventTypeEnter)
-			{
-				std::cout << "Enter: " << (char*)event.user.data1 << std::endl;
-			}
-			else if (event.type == g_u32EventTypeMessage)
-			{
-				std::cout << (char*)event.user.data1 << " say: " << (char*)event.user.data2 << std::endl;
-			}
-		}*/
 	}
 
 	while (!bHasServerRan);
