@@ -1,135 +1,97 @@
-﻿#include <httplib.h>
-#include <cJSON.h>
-#include <SDL.h>
-#include <lua.hpp>
+﻿#include "DanmuGame.h"
 
-#include <thread>
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <unordered_map>
+#ifdef __WIN32__
+#undef PlaySound
+#undef Sleep
+#endif // __WIN32
 
-#define GAME_API extern "C"
-
-Uint32 g_u32EventTypeEnter, g_u32EventTypeMessage;
-
-SDL_Window* g_pWindow = nullptr;
-SDL_Renderer* g_pRenderer = nullptr;
-
-SDL_Event g_event;
-bool g_bIsQuit = false;
-
-std::unordered_map<std::string, Uint32> mapEvent;
-
-static const char* ERRMSG_INVALIDMEMBER = "invalid member";
-
-inline void CheckColor(lua_State* pLuaVM, int idx, SDL_Color& color)
-{
-	luaL_argexpected(pLuaVM, lua_istable(pLuaVM, idx), idx, LUA_TABLIBNAME);
-
-	lua_pushstring(pLuaVM, "r"); lua_rawget(pLuaVM, idx);
-	luaL_argcheck(pLuaVM, lua_isnumber(pLuaVM, -1),
-		idx, std::string(ERRMSG_INVALIDMEMBER).append(" : r").c_str());
-	color.r = (int)lua_tonumber(pLuaVM, -1);
-	lua_pop(pLuaVM, 1);
-
-	lua_pushstring(pLuaVM, "g"); lua_rawget(pLuaVM, idx);
-	luaL_argcheck(pLuaVM, lua_isnumber(pLuaVM, -1),
-		idx, std::string(ERRMSG_INVALIDMEMBER).append(" : g").c_str());
-	color.g = (int)lua_tonumber(pLuaVM, -1);
-	lua_pop(pLuaVM, 1);
-
-	lua_pushstring(pLuaVM, "b"); lua_rawget(pLuaVM, idx);
-	luaL_argcheck(pLuaVM, lua_isnumber(pLuaVM, -1),
-		idx, std::string(ERRMSG_INVALIDMEMBER).append(" : b").c_str());
-	color.b = (int)lua_tonumber(pLuaVM, -1);
-	lua_pop(pLuaVM, 1);
-
-	lua_pushstring(pLuaVM, "a"); lua_rawget(pLuaVM, idx);
-	luaL_argcheck(pLuaVM, lua_isnumber(pLuaVM, -1),
-		idx, std::string(ERRMSG_INVALIDMEMBER).append(" : a").c_str());
-	color.a = (int)lua_tonumber(pLuaVM, -1);
-	lua_pop(pLuaVM, 1);
-}
-
-GAME_API int SetDrawColor(lua_State* pLuaVM)
-{
-	SDL_Color _color; CheckColor(pLuaVM, 1, _color);
-
-	if (_color.a != 255) SDL_SetRenderDrawBlendMode(g_pRenderer, SDL_BLENDMODE_BLEND);
-	SDL_SetRenderDrawColor(g_pRenderer, _color.r, _color.g, _color.b, _color.a);
-
-	return 0;
-}
-
-GAME_API int ClearScreen(lua_State* pLuaVM)
-{
-	SDL_RenderClear(g_pRenderer);
-
-	return 0;
-}
-
-GAME_API int UpdateScreen(lua_State* pLuaVM)
-{
-	SDL_RenderPresent(g_pRenderer);
-
-	return 0;
-}
-
-GAME_API int UpdateEvent(lua_State* pLuaVM)
-{
-	lua_pushboolean(pLuaVM, SDL_PollEvent(&g_event));
-	g_bIsQuit = g_event.type == SDL_QUIT;
-
-	return 1;
-}
-
-GAME_API int CheckEvent(lua_State* pLuaVM)
-{
-	auto itorEvent = mapEvent.find(luaL_checkstring(pLuaVM, 1));
-
-	lua_pushboolean(pLuaVM, itorEvent != mapEvent.end() && itorEvent->second == g_event.type);
-
-	return 1;
-}
-
-GAME_API int GetDanmuUserName(lua_State* pLuaVM)
-{
-	lua_pushstring(pLuaVM, (char*)g_event.user.data1);
-
-	return 1;
-}
-
-GAME_API int GetDanmuContent(lua_State* pLuaVM)
-{
-	lua_pushstring(pLuaVM, (char*)g_event.user.data2);
-
-	return 1;
-}
-
-#undef main
+#undef main 
 int main(int argc, char** argv)
 {
 	// for console debug
 	system("chcp 65001");
 
-	int iPort;
-	std::string strWindowTitle;
-	int iWindowWidth, iWindowHeight;
-	bool bIsFullScreen;
+	lua_State*		pLuaVM = nullptr;
+	int				iPort;
+	std::string		strWindowTitle;
+	int				iWindowWidth, iWindowHeight;
+	bool			bIsFullScreen;
+	int				iMaxFPS;
+	bool			bIsLinearFiltering;
 	httplib::Server server;
-	bool bHasServerRan = false;
-	luaL_Reg aryRegCFuncs[] = { 
+	bool			bHasServerRan = false;
+	SDL_Event		event;
+	bool			bIsQuit = false;
+	Uint32			u32EventTypeEnter, u32EventTypeMessage;
+	luaL_Reg		aryRegCFuncs[] = {
+		{ "QuitGame",			QuitGame },
+
+		{ "SetTitle",			SetWindowTitle },
+		{ "GetTitle",			GetWindowTitle },
+		{ "GetWindowSize",		GetWindowSize },
+
 		{ "SetDrawColor",		SetDrawColor },
-		{ "ClearScreen",		ClearScreen },
-		{ "UpdateScreen",		UpdateScreen },
-		{ "UpdateEvent",		UpdateEvent },
-		{ "CheckEvent",			CheckEvent },
-		{ "GetDanmuUserName",	GetDanmuUserName },
-		{ "GetDanmuContent",	GetDanmuContent },
+		{ "GetDrawColor",		GetDrawColor },
+
+		{ "DrawPoint",			DrawPoint },
+		{ "DrawLine",			DrawLine },
+		{ "DrawRectangle",		DrawRectangle },
+		{ "DrawRoundRectangle",	DrawRoundRectangle },
+		{ "DrawCircle",			DrawCircle },
+		{ "DrawEllipse",		DrawEllipse },
+		{ "DrawPie",			DrawPie },
+		{ "DrawTriangle",		DrawTriangle },
+		{ "DrawPolygon",		DrawPolygon },
+		{ "DrawBezier",			DrawBezier },
+
+		{ "LoadSprite",			LoadSprite },
+		{ "SetSpriteAlpha",		SetSpriteAlpha },
+		{ "GetSpriteSize",		GetSpriteSize },
+		{ "RenderSprite",		RenderSprite },
+		{ "RenderSpriteEx",		RenderSpriteEx },
+		{ "LoadFont",			LoadFont },
+		{ "GetFontStyle",		GetFontStyle },
+		{ "SetFontStyle",		SetFontStyle },
+		{ "GetFontHeight",		GetFontHeight },
+		{ "GetTextSize",		GetTextSize },
+		{ "CreateTextSprite",	CreateTextSprite },
+
+		{ "Delay",				Delay },
+		{ "GetInitTime",		GetInitTime },
+
+		{ "LoadMusic",			LoadMusic },
+		{ "PlayMusic",			PlayMusic },
+		{ "StopMusic",			StopMusic },
+		{ "SetMusicPosition",	SetMusicPosition },
+		{ "SetMusicVolume",		SetMusicVolume },
+		{ "GetMusicVolume",		GetMusicVolume },
+		{ "PauseMusic",			PauseMusic },
+		{ "ResumeMusic",		ResumeMusic },
+		{ "RewindMusic",		RewindMusic },
+		{ "CheckMusicPlaying",	CheckMusicPlaying },
+		{ "CheckMusicPaused",	CheckMusicPaused },
+		{ "GetMusicFadingType",	GetMusicFadingType },
+		{ "LoadSound",			LoadSound },
+		{ "PlaySound",			PlaySound },
+		{ "SetSoundVolume",		SetSoundVolume },
+		{ "GetSoundVolume",		GetSoundVolume },
+
+		{ "LoadJSON",			LoadJSON },
+		{ "DumpJSON",			DumpJSON },
+	};
+	MetaTableData	aryMetaTables[] = {
+		{ METANAME_SPRITE,		GC_Sprite },
+		{ METANAME_FONT,		GC_Font },
+		{ METANAME_MUSIC,		GC_Music },
+		{ METANAME_SOUND,		GC_Sound },
 	};
 
+	std::unordered_map<Uint32, EventHandlerParam> mapEvent;
+
 	SDL_Init(SDL_INIT_EVERYTHING);
+	TTF_Init(); IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_TIF | IMG_INIT_WEBP);
+	Mix_Init(MIX_INIT_FLAC | MIX_INIT_MOD | MIX_INIT_MP3 | MIX_INIT_OGG);
+	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
 
 	// start process config file
 
@@ -167,15 +129,19 @@ int main(int argc, char** argv)
 	cJSON* pJSONWindowTitle = cJSON_GetObjectItem(pJSONConfig, "window-title");
 	cJSON* pJSONWindowSize = cJSON_GetObjectItem(pJSONConfig, "window-size");
 	cJSON* pJSONFullScreen = cJSON_GetObjectItem(pJSONConfig, "full-screen");
-	if (!(pJSONPort && pJSONPort->type == cJSON_Number 
+	cJSON* pJSONMaxFPS = cJSON_GetObjectItem(pJSONConfig, "max-fps");
+	cJSON* pJSONLinearFiltering = cJSON_GetObjectItem(pJSONConfig, "linear-filtering");
+	if (!(pJSONPort && pJSONPort->type == cJSON_Number
 		&& pJSONWindowTitle && pJSONWindowTitle->type == cJSON_String
 		&& pJSONWindowSize && pJSONWindowSize->type == cJSON_Object
-		&& pJSONFullScreen && (pJSONFullScreen->type == cJSON_True || pJSONFullScreen->type == cJSON_False)))
+		&& pJSONFullScreen && (pJSONFullScreen->type == cJSON_True || pJSONFullScreen->type == cJSON_False)
+		&& pJSONMaxFPS && pJSONMaxFPS->type == cJSON_Number
+		&& pJSONLinearFiltering && (pJSONLinearFiltering->type == cJSON_True || pJSONLinearFiltering->type == cJSON_False)))
 	{
 		SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_ERROR,
 			"Config Error",
-			std::string("incomplete config properties").c_str(),
+			std::string("incorrect config properties").c_str(),
 			g_pWindow
 		);
 		cJSON_Delete(pJSONConfig);
@@ -190,7 +156,7 @@ int main(int argc, char** argv)
 		SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_ERROR,
 			"Config Error",
-			std::string("incomplete window size config properties").c_str(),
+			std::string("incorrect window size config properties").c_str(),
 			g_pWindow
 		);
 		cJSON_Delete(pJSONConfig);
@@ -202,16 +168,33 @@ int main(int argc, char** argv)
 	iWindowWidth = pJSONWindowWidth->valueint;
 	iWindowHeight = pJSONWindowHeight->valueint;
 	bIsFullScreen = pJSONFullScreen->valueint;
+	iMaxFPS = pJSONMaxFPS->valueint;
+	bIsLinearFiltering = pJSONLinearFiltering->valueint;
 
 	cJSON_Delete(pJSONConfig);
 
-	g_u32EventTypeEnter = SDL_RegisterEvents(2);
-	g_u32EventTypeMessage = g_u32EventTypeEnter + 1;
+	u32EventTypeEnter = SDL_RegisterEvents(2);
+	u32EventTypeMessage = u32EventTypeEnter + 1;
 
-	mapEvent.insert(std::make_pair("ENTER", g_u32EventTypeEnter));
-	mapEvent.insert(std::make_pair("MESSAGE", g_u32EventTypeMessage));
+	mapEvent.insert(std::pair<Uint32, EventHandlerParam>(u32EventTypeEnter, 
+		{ "ENTER", [&]() {
+			lua_createtable(pLuaVM, 0, 1);
+			lua_pushstring(pLuaVM, "username");
+			lua_pushstring(pLuaVM, (char*)event.user.data1);
+			lua_rawset(pLuaVM, -3); 
+		}}));
+	mapEvent.insert(std::pair<Uint32, EventHandlerParam>(u32EventTypeMessage, 
+		{ "MESSAGE", [&]() {
+			lua_createtable(pLuaVM, 0, 2);
+			lua_pushstring(pLuaVM, "username");
+			lua_pushstring(pLuaVM, (char*)event.user.data1);
+			lua_rawset(pLuaVM, -3);
+			lua_pushstring(pLuaVM, "message");
+			lua_pushstring(pLuaVM, (char*)event.user.data2);
+			lua_rawset(pLuaVM, -3);
+		}}));
 
-	server.Post("/enter", [](const httplib::Request& req, httplib::Response& res) {
+	server.Post("/enter", [&](const httplib::Request& req, httplib::Response& res) {
 		// req.body like this: "{\"username\":\"Voidmatrix\"}"
 		std::string strJSONCopy = req.body;
 		strJSONCopy.replace(0, 1, "").replace(strJSONCopy.size() - 1, 1, "");
@@ -224,7 +207,7 @@ int main(int argc, char** argv)
 		if (pJSONUsername)
 		{
 			SDL_Event event; SDL_zero(event);
-			event.type = g_u32EventTypeEnter;
+			event.type = u32EventTypeEnter;
 			event.user.data1 = (char*)malloc(sizeof(char) * (strlen(pJSONUsername->valuestring) + 1));
 			if (event.user.data1)
 			{
@@ -235,7 +218,7 @@ int main(int argc, char** argv)
 		cJSON_Delete(pJSON);
 	});
 
-	server.Post("/message", [](const httplib::Request& req, httplib::Response& res) {
+	server.Post("/message", [&](const httplib::Request& req, httplib::Response& res) {
 		// process raw json string like before
 		std::string strJSONCopy = req.body;
 		strJSONCopy.replace(0, 1, "").replace(strJSONCopy.size() - 1, 1, "");
@@ -248,7 +231,7 @@ int main(int argc, char** argv)
 		if (pJSONUsername && pJSONMessage)
 		{
 			SDL_Event event; SDL_zero(event);
-			event.type = g_u32EventTypeMessage;
+			event.type = u32EventTypeMessage;
 			event.user.data1 = (char*)malloc(sizeof(char) * (strlen(pJSONUsername->valuestring) + 1));
 			event.user.data2 = (char*)malloc(sizeof(char) * (strlen(pJSONMessage->valuestring) + 1));
 			if (event.user.data1 && event.user.data2)
@@ -266,11 +249,11 @@ int main(int argc, char** argv)
 		cJSON_Delete(pJSON);
 	});
 
-	std::thread tServer([&]() { server.listen("127.0.0.1", 25566); bHasServerRan = true; });
+	std::thread tServer([&]() { server.listen("127.0.0.1", iPort); bHasServerRan = true; });
 
 	// start engine logic code
 
-	lua_State* pLuaVM = luaL_newstate();
+	pLuaVM = luaL_newstate();
 	luaL_openlibs(pLuaVM);
 	lua_gc(pLuaVM, LUA_GCINC, 100);
 
@@ -278,6 +261,15 @@ int main(int argc, char** argv)
 	{
 		lua_pushcfunction(pLuaVM, aryRegCFuncs[i].func);
 		lua_setglobal(pLuaVM, aryRegCFuncs[i].name);
+	}
+
+	for (size_t i = 0; i < sizeof(aryMetaTables) / sizeof(MetaTableData); i++)
+	{
+		luaL_newmetatable(pLuaVM, aryMetaTables[i].name.c_str());
+
+		lua_pushstring(pLuaVM, "__gc");
+		lua_pushcfunction(pLuaVM, aryMetaTables[i].gc_func);
+		lua_rawset(pLuaVM, -3);
 	}
 
 	g_pWindow = SDL_CreateWindow(
@@ -292,6 +284,9 @@ int main(int argc, char** argv)
 		SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED
 	);
 
+	if (bIsLinearFiltering)
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+
 	if (luaL_dofile(pLuaVM, "GameScript.lua"))
 	{
 		SDL_ShowSimpleMessageBox(
@@ -300,11 +295,56 @@ int main(int argc, char** argv)
 			lua_tostring(pLuaVM, -1),
 			g_pWindow
 		);
-		g_bIsQuit = true;
+		bIsQuit = true;
 	}
 
-	while (!g_bIsQuit)
+	while (!bIsQuit)
 	{
+		Uint32 u32TimeFrameStart = SDL_GetTicks();
+
+		SDL_SetRenderDrawColor(g_pRenderer, 0, 0, 0, 255);
+		SDL_RenderClear(g_pRenderer);
+
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_QUIT)
+				bIsQuit = true;
+			else
+			{
+				auto itorEvent = mapEvent.find(event.type);
+				if (itorEvent != mapEvent.end())
+				{
+					lua_getglobal(pLuaVM, "__EventHandler");
+					if (!lua_isfunction(pLuaVM, -1))
+					{
+						SDL_ShowSimpleMessageBox(
+							SDL_MESSAGEBOX_ERROR,
+							"Script Error",
+							"function __EventHandler is not defined",
+							g_pWindow
+						);
+						bIsQuit = true;
+						break;
+					}
+
+					lua_pushstring(pLuaVM, itorEvent->second.name.c_str());
+					itorEvent->second.PushExtraData();
+
+					if (lua_pcall(pLuaVM, 2, 0, 0) != 0)
+					{
+						SDL_ShowSimpleMessageBox(
+							SDL_MESSAGEBOX_ERROR,
+							"Script Error",
+							lua_tostring(pLuaVM, -1),
+							g_pWindow
+						);
+						bIsQuit = true;
+						break;
+					}
+				}
+			}
+		}
+
 		lua_getglobal(pLuaVM, "__MainUpdate");
 		if (!lua_isfunction(pLuaVM, -1))
 		{
@@ -317,7 +357,7 @@ int main(int argc, char** argv)
 			break;
 		}
 
-		if (lua_pcall(pLuaVM, 0, 1, 0) != 0)
+		if (lua_pcall(pLuaVM, 0, 0, 0) != 0)
 		{
 			SDL_ShowSimpleMessageBox(
 				SDL_MESSAGEBOX_ERROR,
@@ -328,12 +368,21 @@ int main(int argc, char** argv)
 			break;
 		}
 
-		g_bIsQuit = g_bIsQuit || !lua_toboolean(pLuaVM, -1);
+		SDL_RenderPresent(g_pRenderer);
 
-		lua_pop(pLuaVM, 1);
+		Uint32 u32TimeFrameEnd = SDL_GetTicks();
+
+		if (u32TimeFrameEnd - u32TimeFrameStart < (Uint32)(1000 / iMaxFPS))
+			SDL_Delay(1000 / iMaxFPS - (u32TimeFrameEnd - u32TimeFrameStart));
 	}
 
-	while (!bHasServerRan);
+	lua_close(pLuaVM);
+
+	SDL_DestroyRenderer(g_pRenderer);
+	SDL_DestroyWindow(g_pWindow);
+	SDL_Quit();
+
+	while (!server.is_running() && !bHasServerRan) SDL_Delay(25);
 
 	server.stop(); tServer.join();
 
