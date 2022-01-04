@@ -1,0 +1,17 @@
+{
+  "name": "DanmuUtil",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Voidmatrix",
+  "license": "MIT",
+  "dependencies": {
+    "bilibili-live-ws": "^6.0.3",
+    "request": "^2.88.2",
+    "silly-datetime": "^0.1.2"
+  }
+}
