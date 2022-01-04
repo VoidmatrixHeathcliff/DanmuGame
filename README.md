@@ -71,7 +71,7 @@ DanmuGame 游戏框架和 VisualDebugTool 调试器项目提供了基于 VisualS
 
 ## 游戏脚本编写及 API 详解
 
-`GameScript.lua` 将作为游戏逻辑的入口脚本进行加载运行，使用 `Lua 5.4` 版本语法编写，请确保已在脚本环境中声明 `__EventHandler` 函数和 `__MainUpdate` 函数，这两个函数会分别在 **直播间事件更新**（如弹幕发送）和 **游戏画面帧更新** 时被调用：
+`GameScript.lua` 将作为游戏逻辑的入口脚本进行加载运行，使用 `Lua 5.4` 语法编写，请确保已在脚本环境中声明 `__EventHandler` 函数和 `__MainUpdate` 函数，这两个函数会分别在 **直播间事件更新**（如弹幕发送）和 **游戏画面帧更新** 时被调用：
 + 对于函数 `__EventHandler(event, data)`，第一个参数 `event` 是代表当前事件类型的字符串，第二个参数包含了事件相关数据，可能的值如下：
     | 值          | 事件         | 数据                                                 |
     |-------------|--------------|------------------------------------------------------|
@@ -80,8 +80,6 @@ DanmuGame 游戏框架和 VisualDebugTool 调试器项目提供了基于 VisualS
 + 对于函数 `__MainUpdate()`，程序会在每次尝试刷新游戏画面时调用此函数，可以在函数内编写游戏画面渲染相关的逻辑；
 
 ---
-
-***以下内容正在维护 ...***
 
 <details>
     <summary>🕹 游戏控制相关 API</summary>
@@ -96,49 +94,273 @@ DanmuGame 游戏框架和 VisualDebugTool 调试器项目提供了基于 VisualS
 <details>
     <summary>🖥 游戏窗口相关 API</summary>
 
-| 函数名                                                      | 简介                         |
-|:------------------------------------------------------------|:-----------------------------|
-| [ETHX_InitWindow()](#ETHX_InitWindow)                       | 初始化 EtherX 并创建窗口     |
-| [ETHX_QuitWindow()](#ETHX_QuitWindow)                       | 退出 EtherX 并关闭窗口       |
-| [ETHX_ShowMessageBox()](#ETHX_ShowMessageBox)               | 显示信息提示框               |
-| [ETHX_ShowConfirmMessageBox()](#ETHX_ShowConfirmMessageBox) | 显示信息提示确认窗口         |
-| [ETHX_SetWindowTitle()](#ETHX_SetWindowTitle)               | 重新设置窗口标题             |
-| [ETHX_GetWindowTitle()](#ETHX_GetWindowTitle)               | 获取窗口标题                 |
-| [ETHX_SetWindowFullscreen()](#ETHX_SetWindowFullscreen)     | 设置窗口是否全屏             |
-| [ETHX_SetWindowSize()](#ETHX_SetWindowSize)                 | 设置窗口大小                 |
-| [ETHX_GetWindowSize()](#ETHX_GetWindowSize)                 | 获取窗口大小                 |
-| [ETHX_GetWindowSize_HDPI()](#ETHX_GetWindowSize_HDPI)       | 获取高分辨率下窗口的实际大小 |
-| [ETHX_SetWindowIcon()](#ETHX_SetWindowIcon)                 | 设置窗口图标                 |
-| [ETHX_ClearWindow()](#ETHX_ClearWindow)                     | 清空窗口内容                 |
-| [ETHX_UpdateWindow()](#ETHX_UpdateWindow)                   | 刷新窗口                     |
+### SetTitle(title)
++ **功能：** 设置窗口标题
++ **参数简介：** 
+    | 参数    | 类型     | 简介     |
+    |:--------|:---------|:---------|
+    | `title` | `string` | 窗口标题 |
++ **返回值简介：** 无
+
+### title = GetTitle()
++ **功能：** 获取窗口标题
++ **参数简介：** 无
++ **返回值简介：** 
+    | 返回值  | 类型     | 简介     |
+    |:--------|:---------|:---------|
+    | `title` | `string` | 窗口标题 |
+
+### width, height = GetWindowSize()
++ **功能：** 获取窗口尺寸
++ **参数简介：** 无
++ **返回值简介：** 
+    | 返回值   | 类型     | 简介                   |
+    |:---------|:---------|:-----------------------|
+    | `width`  | `number` | 窗口宽度（单位：像素） |
+    | `height` | `number` | 窗口高度（单位：像素） |
 
 </details>
 
 <details>
     <summary>🖼 游戏画面相关 API</summary>
 
-| 函数名                                            | 简介                               |
-|:--------------------------------------------------|:-----------------------------------|
-| [ETHX_LoadImage()](#ETHX_LoadImage)               | 加载图像对象                       |
-| [ETHX_SetImageColorKey()](#ETHX_SetImageColorKey) | 设置图像对象指定的透明颜色是否启用 |
-| [ETHX_SetImageAplha()](#ETHX_SetImageAplha)       | 设置图像透明度                     |
-| [ETHX_GetImageSize()](#ETHX_GetImageSize)         | 获取图像尺寸                       |
-| [ETHX_DrawImage()](#ETHX_DrawImage)               | 绘制图像                           |
-| [ETHX_SetDrawColor()](#ETHX_SetDrawColor)         | 设置绘图颜色                       |
-| [ETHX_GetDrawColor()](#ETHX_GetDrawColor)         | 获取当前绘图颜色                   |
-| [ETHX_DrawPoint()](#ETHX_DrawPoint)               | 绘制点                             |
-| [ETHX_DrawLine()](#ETHX_DrawLine)                 | 绘制线段                           |
-| [ETHX_DrawRectangle()](#ETHX_DrawRectangle)       | 绘制矩形                           |
-| [ETHX_DrawCircle()](#ETHX_DrawCircle)             | 绘制圆                             |
-| [ETHX_DrawEllipse()](#ETHX_DrawEllipse)           | 绘制椭圆                           |
-| [ETHX_DrawPie()](#ETHX_DrawPie)                   | 绘制扇形                           |
-| [ETHX_DrawTriangle()](#ETHX_DrawTriangle)         | 绘制三角形                         |
-| [ETHX_LoadFont()](#ETHX_LoadFont)                 | 加载字体对象                       |
-| [ETHX_SetFontStyle()](#ETHX_SetFontStyle)         | 设置字体样式                       |
-| [ETHX_GetFontStyle()](#ETHX_GetFontStyle)         | 获取字体样式                       |
-| [ETHX_GetTextSize()](#ETHX_GetTextSize)           | 获取指定字体的文本尺寸             |
-| [ETHX_DrawText()](#ETHX_DrawText)                 | 绘制文本内容                       |
-| [ETHX_CreateTextImage()](#ETHX_CreateTextImage)   | 创建文本图像                       |
+### SetDrawColor(color)
++ **功能：** 设置绘图颜色
++ **参数简介：** 
+    | 参数    | 类型    | 简介     |
+    |:--------|:--------|:---------|
+    | `color` | `table` | 绘图颜色 |
++ **返回值简介：** 无
+
+### color = GetDrawColor()
++ **功能：** 设置绘图颜色
++ **参数简介：** 无
++ **返回值简介：** 
+    | 返回值  | 类型    | 简介     |
+    |:--------|:--------|:---------|
+    | `color` | `table` | 绘图颜色 |
+
+### DrawPoint(point)
++ **功能：** 绘制像素点
++ **参数简介：** 
+    | 参数    | 类型    | 简介   |
+    |:--------|:--------|:-------|
+    | `point` | `table` | 点坐标 |
++ **返回值简介：** 无
+
+### DrawLine(begin, end)
++ **功能：** 绘制线段
++ **参数简介：** 
+    | 参数    | 类型    | 简介       |
+    |:--------|:--------|:-----------|
+    | `begin` | `table` | 起始点坐标 |
+    | `end`   | `table` | 结束点坐标 |
++ **返回值简介：** 无
+
+### DrawRectangle(rect, fill)
++ **功能：** 绘制矩形
++ **参数简介：** 
+    | 参数   | 类型      | 简介                   |
+    |:-------|:----------|:-----------------------|
+    | `rect` | `table`   | 矩形坐标和尺寸         |
+    | `fill` | `boolean` | 是否填充，默认为 false |
++ **返回值简介：** 无
+
+### DrawRoundRectangle(rect, radius, fill)
++ **功能：** 绘制圆角矩形
++ **参数简介：** 
+    | 参数     | 类型      | 简介                   |
+    |:---------|:----------|:-----------------------|
+    | `rect`   | `table`   | 矩形坐标和尺寸         |
+    | `radius` | `number`  | 圆角所在圆的半径       |
+    | `fill`   | `boolean` | 是否填充，默认为 false |
++ **返回值简介：** 无
+
+### DrawCircle(center, radius, fill)
++ **功能：** 绘制圆形
++ **参数简介：** 
+    | 参数     | 类型      | 简介                   |
+    |:---------|:----------|:-----------------------|
+    | `center` | `table`   | 圆心坐标               |
+    | `radius` | `number`  | 圆半径                 |
+    | `fill`   | `boolean` | 是否填充，默认为 false |
++ **返回值简介：** 无
+
+### DrawEllipse(center, radius_x, radius_y, fill)
++ **功能：** 绘制椭圆形
++ **参数简介：** 
+    | 参数       | 类型      | 简介                   |
+    |:-----------|:----------|:-----------------------|
+    | `center`   | `table`   | 椭圆中心坐标           |
+    | `radius_x` | `number`  | 椭圆 X 方向半径        |
+    | `radius_y` | `number`  | 椭圆 Y 方向半径        |
+    | `fill`     | `boolean` | 是否填充，默认为 false |
++ **返回值简介：** 无
+
+### DrawPie(center, radius, start, end, fill)
++ **功能：** 绘制扇形
++ **参数简介：** 
+    | 参数     | 类型      | 简介                     |
+    |:---------|:----------|:-------------------------|
+    | `center` | `table`   | 扇形所在圆的圆心坐标     |
+    | `radius` | `number`  | 扇形所在圆的半径         |
+    | `start`  | `number`  | 起始角度，逆时针为正方向 |
+    | `end`    | `number`  | 结束角度，逆时针为正方向 |
+    | `fill`   | `boolean` | 是否填充，默认为 false   |
++ **返回值简介：** 无
+
+### DrawTriangle(point_1, point_2, point_3, fill)
++ **功能：** 绘制三角形
++ **参数简介：** 
+    | 参数      | 类型      | 简介                   |
+    |:----------|:----------|:-----------------------|
+    | `point_1` | `table`   | 三角形第一个顶点坐标   |
+    | `point_2` | `table`   | 三角形第二个顶点坐标   |
+    | `point_3` | `table`   | 三角形第三个顶点坐标   |
+    | `fill`    | `boolean` | 是否填充，默认为 false |
++ **返回值简介：** 无
+
+### DrawPolygon(point_list, fill)
++ **功能：** 绘制多边形（凸多边形）
++ **参数简介：** 
+    | 参数         | 类型      | 简介                     |
+    |:-------------|:----------|:-------------------------|
+    | `point_list` | `table`   | 多边形顶点坐标构成的数组 |
+    | `fill`       | `boolean` | 是否填充，默认为 false   |
++ **返回值简介：** 无
+
+### DrawBezier(point_list, steps)
++ **功能：** 绘制贝塞尔曲线
++ **参数简介：** 
+    | 参数         | 类型     | 简介                     |
+    |:-------------|:---------|:-------------------------|
+    | `point_list` | `table`  | 多边形顶点坐标构成的数组 |
+    | `steps`      | `number` | 差值步数                 |
++ **返回值简介：** 无
+
+### sprite = LoadSprite(path)
++ **功能：** 加载贴图
++ **参数简介：** 
+    | 参数   | 类型     | 简介         |
+    |:-------|:---------|:-------------|
+    | `path` | `string` | 贴图文件路径 |
++ **返回值简介：** 
+    | 返回值   | 类型           | 简介                               |
+    |:---------|:---------------|:-----------------------------------|
+    | `sprite` | `userdata/nil` | 加载成功返回贴图数据，失败返回 nil |
+
+### SetSpriteAlpha(sprite, alpha)
++ **功能：** 设置贴图透明度
++ **参数简介：** 
+    | 参数     | 类型       | 简介                           |
+    |:---------|:-----------|:-------------------------------|
+    | `sprite` | `userdata` | 贴图数据                       |
+    | `alpha`  | `number`   | 贴图透明度，取值范围为 0 ~ 255 |
++ **返回值简介：** 无
+
+### width, height = GetSpriteSize(sprite)
++ **功能：** 获取贴图尺寸
++ **参数简介：** 
+    | 参数     | 类型       | 简介     |
+    |:---------|:-----------|:---------|
+    | `sprite` | `userdata` | 贴图数据 |
++ **返回值简介：** 
+    | 返回值   | 类型     | 简介                 |
+    |:---------|:---------|:---------------------|
+    | `width`  | `number` | 贴图宽度，单位：像素 |
+    | `height` | `number` | 贴图高度，单位：像素 |
+
+### RenderSprite(sprite, rect_show, rect_clip)
++ **功能：** 渲染贴图
++ **参数简介：** 
+    | 参数        | 类型       | 简介                                         |
+    |:------------|:-----------|:---------------------------------------------|
+    | `sprite`    | `userdata` | 贴图数据                                     |
+    | `rect_show` | `table`    | 贴图显示区域的坐标和尺寸                     |
+    | `rect_clip` | `table`    | 贴图裁剪区域的坐标和尺寸，默认为完整贴图部分 |
++ **返回值简介：** 无
+
+### RenderSpriteEx(sprite, rect_show, rect_clip, center, angle, mode)
++ **功能：** 使用高级模式渲染贴图
++ **参数简介：** 
+    | 参数        | 类型       | 简介                                                                                          |
+    |:------------|:-----------|:----------------------------------------------------------------------------------------------|
+    | `sprite`    | `userdata` | 贴图数据                                                                                      |
+    | `rect_show` | `table`    | 贴图显示区域的坐标和尺寸                                                                      |
+    | `rect_clip` | `table`    | 贴图裁剪区域的坐标和尺寸，默认为完整贴图部分                                                  |
+    | `center`    | `table`    | 贴图旋转中心                                                                                  |
+    | `angle`     | `number`   | 贴图旋转角度，逆时针为正方向                                                                  |
+    | `mode`      | `table`    | 描述旋转模式的数组，成员可能的值为：<br>`"H"`表示水平翻转，`"V"`表示竖直翻转，`"N"`表示不翻转 |
++ **返回值简介：** 无
+
+### font = LoadFont(path, size)
++ **功能：** 加载字体
++ **参数简介：** 
+    | 参数   | 类型     | 简介                                |
+    |:-------|:---------|:------------------------------------|
+    | `path` | `string` | 字体文件路径                        |
+    | `size` | `string` | 字体大小，通常为 72DPI 下的像素高度 |
++ **返回值简介：** 
+    | 返回值 | 类型           | 简介                               |
+    |:-------|:---------------|:-----------------------------------|
+    | `font` | `userdata/nil` | 加载成功返回字体数据，失败返回 nil |
+
+### style = GetFontStyle(font)
++ **功能：** 获取字体样式
++ **参数简介：** 
+    | 参数   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `font` | `userdata` | 字体数据 |
++ **返回值简介：** 
+    | 返回值  | 类型    | 简介                                                                                                                |
+    |:--------|:--------|:--------------------------------------------------------------------------------------------------------------------|
+    | `style` | `table` | 字体样式数组，成员可能的值为：<br>`"B"`表示粗体，`"I"`表示斜体，`"U"`表示下划线，`"S"`表示删除线，`"N"`表示默认样式 |
+
+### SetFontStyle(font, style)
++ **功能：** 设置字体样式
++ **参数简介：** 
+    | 参数    | 类型       | 简介                             |
+    |:--------|:-----------|:---------------------------------|
+    | `font`  | `userdata` | 字体数据                         |
+    | `style` | `table`    | 字体样式数组，成员可能的值见前述 |
++ **返回值简介：** 无
+
+### height = GetFontHeight(font)
++ **功能：** 获取字体高度
++ **参数简介：** 
+    | 参数   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `font` | `userdata` | 字体数据 |
++ **返回值简介：** 
+    | 返回值   | 类型     | 简介                 |
+    |:---------|:---------|:---------------------|
+    | `height` | `number` | 字体高度，单位：像素 |
+
+### width, height = GetTextSize(font, text)
++ **功能：** 获取文本尺寸
++ **参数简介：** 
+    | 参数   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `font` | `userdata` | 字体数据 |
+    | `text` | `string` | 文本内容 |
++ **返回值简介：** 
+    | 返回值   | 类型     | 简介                 |
+    |:---------|:---------|:---------------------|
+    | `width` | `number` | 文本宽度，单位：像素 |
+    | `height` | `number` | 文本高度，单位：像素 |
+
+### sprite = CreateTextSprite(font, text, color)
++ **功能：** 创建文本贴图
++ **参数简介：** 
+    | 参数   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `font` | `userdata` | 字体数据 |
+    | `text` | `string` | 文本内容 |
+    | `color` | `table` | 文本颜色 |
++ **返回值简介：** 
+    | 返回值   | 类型     | 简介                 |
+    |:---------|:---------|:---------------------|
+    | `sprite` | `userdata/nil` | 创建成功返回贴图数据，失败返回 nil |
 
 </details>
 
@@ -166,18 +388,48 @@ DanmuGame 游戏框架和 VisualDebugTool 调试器项目提供了基于 VisualS
 <details>
     <summary>⏲ 时间控制相关 API</summary>
 
-| 函数名                                  | 简介                         |
-|:----------------------------------------|:-----------------------------|
-| [ETHX_Sleep()](#ETHX_Sleep)             | 暂停程序指定时长             |
-| [ETHX_GetInitTime()](#ETHX_GetInitTime) | 获取程序从初始化到现在的时长 |
+### Delay(time)
++ **功能：** 延时指定时间
++ **参数简介：** 
+    | 参数   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `time` | `number` | 延时时间，单位：毫秒 |
++ **返回值简介：** 无
+
+### time = GetInitTime()
++ **功能：** 获取从程序初始化到现在的时间
++ **参数简介：** 无
++ **返回值简介：** 
+    | 返回值   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `time` | `number` | 从程序初始化到现在的时间，单位：毫秒 |
 
 </details>
 
 <details>
     <summary>📌 数据存储相关 API</summary>
 
-+ [窗口坐标系](#window-coordinate-system)
-+ [图像坐标系](#image-coordinate-system)
-+ [字符串编码](#string-encoding)
+### json = LoadJSON(str)
++ **功能：** 加载 JSON 字符串为 Lua 数据
++ **参数简介：** 
+    | 参数   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `str` | `string` | JSON 字符串 |
++ **返回值简介：** 
+    | 返回值   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `json` | `nil/number/string/boolean/table` | JSON 字符串反序列化得到的 Lua 数据 |
+
+### str = DumpJSON(json)
++ **功能：** 加载 JSON 字符串为 Lua 数据
++ **参数简介：** 
+    | 参数   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `json` | `nil/number/string/boolean/table` | 可以被序列化为 JSON 字符串的 Lua 数据 |
++ **返回值简介：** 
+    | 返回值   | 类型       | 简介     |
+    |:-------|:-----------|:---------|
+    | `str` | `string` | JSON 字符串 |
+
 
 </details>
