@@ -496,6 +496,7 @@ DanmuGame 游戏框架和 VisualDebugTool 调试器项目提供了基于 VisualS
     | `sound` | `userdata` | 音效数据 |
 + **返回值简介：** 
     | 参数   | 类型     | 简介         |
+    |:--------|:-----------|:---------|
     | `volume` | `number` | 音效音量，取值范围为 0 ~ 128 |
 
 </details>
