@@ -63,8 +63,8 @@ DanmuGame 游戏框架和 VisualDebugTool 调试器项目提供了基于 VisualS
 + `port`：DanmuUtil 程序和 DanmuGame 游戏框架在本地通信的端口号
 + `window-title`：游戏窗口标题文本
 + `window-size`：游戏窗口尺寸
-    - `width`：游戏窗口宽度（像素）
-    - `height`：游戏窗口高度（像素）
+    - `width`：游戏窗口宽度（单位：像素）
+    - `height`：游戏窗口高度（单位：像素）
 + `full-screen`：游戏窗口全屏（将覆盖游戏窗口尺寸设置）
 + `max-fps`：游戏最高帧率，设置过大的最高帧率可能导致实际帧率不稳定（建议区间：60 ~ 144）
 + `linear-filtering`：对游戏画面开启线性过滤抗锯齿（某些需要对图片素材缩放的像素风游戏可能不适合开启）
