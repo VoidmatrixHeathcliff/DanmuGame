@@ -76,7 +76,7 @@ DanmuGame 游戏框架和 VisualDebugTool 调试器项目提供了基于 VisualS
     | 值          | 事件         | 数据                                                 |
     |-------------|--------------|------------------------------------------------------|
     | `"ENTER"`   | 观众进入房间 | `data.username` 观众昵称                             |
-    | `"MESSAGE"` | 观众发送弹幕 | `data.username` 观众昵称<br>`data.username` 弹幕内容 |
+    | `"MESSAGE"` | 观众发送弹幕 | `data.username` 观众昵称<br>`data.message` 弹幕内容 |
 + 对于函数 `__MainUpdate()`，程序会在每次尝试刷新游戏画面时调用此函数，可以在函数内编写游戏画面渲染相关的逻辑；
 
 ---
