@@ -29,6 +29,10 @@
 </div>
 
 > 本项目基于 [bilibili-live-ws](https://github.com/simon300000/bilibili-live-ws) 开发，在此特别感谢为本项目开拓道路的大佬们 ~
+>
+> 欢迎关注更完善的Lua引擎项目：https://github.com/VoidmatrixHeathcliff/VoidNovelEngine
+>
+> 以及VoidNovelEngine与大家见面的第一个视频：https://www.bilibili.com/video/BV1v2i3B7EqE/
 
 ## 程序结构及流程
 
